@@ -1,0 +1,580 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>AI Face Confidence Evaluator</title>
+
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+        rel="stylesheet"
+    >
+    <style>
+        body {
+            background-color: #0f172a;
+            color: #f8fafc;
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        .card-custom {
+            background-color: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 12px;
+        }
+
+        .stream-box {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 4 / 3;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 2px solid #334155;
+            background: #000;
+        }
+
+        #webcam {
+            display: block;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        #overlayCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        .status-badge {
+            font-size: 1.1rem;
+            font-weight: 700;
+            padding: 8px 16px;
+            border-radius: 20px;
+        }
+
+        .bg-confident {
+            background-color: #059669;
+            color: #fff;
+        }
+
+        .bg-underconfident {
+            background-color: #dc2626;
+            color: #fff;
+        }
+
+        .progress {
+            height: 10px;
+            background-color: #334155;
+        }
+
+        .form-check-input {
+            cursor: pointer;
+        }
+
+        .form-check-label {
+            cursor: pointer;
+            user-select: none;
+        }
+    </style>
+</head>
+<body class="py-4">
+<div class="container">
+
+    <header
+        class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom border-secondary"
+    >
+        <div>
+            <h3 class="fw-bold mb-0">
+                Real-Time Confidence Detector
+            </h3>
+        </div>
+
+        <span
+            id="statusBadge"
+            class="status-badge bg-secondary"
+        >
+            INITIALIZING
+        </span>
+    </header>
+    <div class="row g-4">
+
+        <div class="col-lg-7">
+
+            <div class="card-custom p-3">
+
+                <div
+                    class="d-flex justify-content-between align-items-center mb-3"
+                >
+                    <h5 class="card-title mb-0 text-info">
+                        Live Feed
+                    </h5>
+                    <div class="form-check form-switch">
+                        <input
+                            class="form-check-input"
+                            type="checkbox"
+                            id="meshToggle"
+                            checked
+                        >
+                        <label
+                            class="form-check-label"
+                            for="meshToggle"
+                        >
+                            Face Mesh
+                        </label>
+
+                    </div>
+
+                </div>
+                <div class="stream-box">
+
+                    <video
+                        id="webcam"
+                        autoplay
+                        playsinline
+                        muted
+                    ></video>
+
+                    <canvas
+                        id="overlayCanvas"
+                    ></canvas>
+
+                </div>
+
+            </div>
+
+        </div>
+        <div class="col-lg-5">
+            <div
+                class="card-custom p-4 h-100 d-flex flex-column justify-content-between"
+            >
+                <div>
+                    <h5 class="card-title mb-4 text-info">
+                        Confidence Score Breakdown
+                    </h5>
+                    <div
+                        class="mb-4 text-center p-3 rounded"
+                        style="background-color: #0f172a;"
+                    >
+                     <span
+                            class="text-uppercase small fw-bold"
+                            style="color: #f8fafc;"
+                        >
+                            Overall Score
+                        </span>
+                        <h1
+                            id="totalScore"
+                            class="display-4 fw-bold text-light my-1"
+                        >
+                            0.00
+                        </h1>
+                        <small style="color: #f8fafc;">
+                            Threshold: 0.62
+                        </small>
+                    </div>
+
+                    <div class="mb-3">
+
+                        <div
+                            class="d-flex justify-content-between mb-1"
+                        >
+                            <span>Head Pitch</span>
+
+                            <span
+                                id="val-pitch"
+                                class="fw-bold"
+                            >
+                                0.00
+                            </span>
+                        </div>
+
+                        <div class="progress">
+
+                            <div
+                                id="bar-pitch"
+                                class="progress-bar bg-info"
+                                style="width: 0%"
+                            ></div>
+
+                        </div>
+
+                    </div>
+                    <div class="mb-3">
+
+                        <div
+                            class="d-flex justify-content-between mb-1"
+                        >
+                            <span>Mouth Curve</span>
+
+                            <span
+                                id="val-mouth"
+                                class="fw-bold"
+                            >
+                                0.00
+                            </span>
+                        </div>
+
+                        <div class="progress">
+
+                            <div
+                                id="bar-mouth"
+                                class="progress-bar bg-info"
+                                style="width: 0%"
+                            ></div>
+
+                        </div>
+
+                    </div>
+                    <div class="mb-3">
+
+                        <div
+                            class="d-flex justify-content-between mb-1"
+                        >
+                            <span>Brow Height</span>
+
+                            <span
+                                id="val-brow"
+                                class="fw-bold"
+                            >
+                                0.00
+                            </span>
+                        </div>
+
+                        <div class="progress">
+
+                            <div
+                                id="bar-brow"
+                                class="progress-bar bg-info"
+                                style="width: 0%"
+                            ></div>
+
+                        </div>
+
+                    </div>
+                    <div class="mb-3">
+
+                        <div
+                            class="d-flex justify-content-between mb-1"
+                        >
+                            <span>Eye Openness</span>
+
+                            <span
+                                id="val-eye"
+                                class="fw-bold"
+                            >
+                                0.00
+                            </span>
+                        </div>
+
+                        <div class="progress">
+
+                            <div
+                                id="bar-eye"
+                                class="progress-bar bg-info"
+                                style="width: 0%"
+                            ></div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+                <div
+                    class="mt-4 pt-3 border-top border-secondary text-muted small"
+                >
+                    <span>
+                        Engine: MediaPipe FaceMesh + OpenCV
+                    </span>
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+<script>
+    const video =
+        document.getElementById("webcam");
+    const overlayCanvas =
+        document.getElementById("overlayCanvas");
+    const overlayCtx =
+        overlayCanvas.getContext("2d");
+    const meshToggle =
+        document.getElementById("meshToggle");
+    let isProcessing = false;
+    let latestLandmarks = [];
+    navigator.mediaDevices
+        .getUserMedia({
+            video: {
+                width: 640,
+                height: 480
+            },
+            audio: false
+        })
+        .then(stream => {
+
+            video.srcObject = stream;
+
+            video.onloadedmetadata = () => {
+
+                overlayCanvas.width =
+                    video.videoWidth;
+
+                overlayCanvas.height =
+                    video.videoHeight;
+
+                drawOverlay();
+                setInterval(
+                    sendFrame,
+                    300
+                );
+            };
+
+        })
+
+        .catch(error => {
+
+            console.error(
+                "Camera error:",
+                error
+            );
+            document.getElementById(
+                "statusBadge"
+            ).innerText =
+                "CAMERA ERROR";
+
+            document.getElementById(
+                "statusBadge"
+            ).className =
+                "status-badge bg-underconfident";
+
+        });
+    async function sendFrame() {
+
+        if (
+            isProcessing ||
+            video.readyState < 2
+        ) {
+            return;
+        }
+
+        isProcessing = true;
+        const captureCanvas =
+            document.createElement("canvas");
+
+        captureCanvas.width =
+            video.videoWidth;
+
+        captureCanvas.height =
+            video.videoHeight;
+
+
+        const captureCtx =
+            captureCanvas.getContext("2d");
+
+
+        captureCtx.drawImage(
+            video,
+            0,
+            0,
+            captureCanvas.width,
+            captureCanvas.height
+        );
+
+
+        const imageData =
+            captureCanvas.toDataURL(
+                "image/jpeg",
+                0.5
+            );
+
+
+        try {
+
+            const response =
+                await fetch(
+                    "/api/process_frame",
+                    {
+                        method: "POST",
+
+                        headers: {
+                            "Content-Type":
+                                "application/json"
+                        },
+
+                        body: JSON.stringify({
+                            image: imageData
+                        })
+                    }
+                );
+
+
+            if (!response.ok) {
+                throw new Error(
+                    `Server returned ${response.status}`
+                );
+            }
+
+
+            const data =
+                await response.json();
+
+            if (data.metrics) {
+                updateUI(
+                    data.metrics
+                );
+
+            }
+            if (
+                data.landmarks &&
+                data.landmarks.length > 0
+            ) {
+
+                latestLandmarks =
+                    data.landmarks;
+
+            } else {
+
+                latestLandmarks = [];
+
+            }
+        }
+        catch (error) {
+
+            console.error(
+                "Frame processing error:",
+                error
+            );
+
+        }
+        finally {
+
+            isProcessing = false;
+
+        }
+    }
+    function drawOverlay() {
+
+        overlayCtx.clearRect(
+            0,
+            0,
+            overlayCanvas.width,
+            overlayCanvas.height
+        );
+        if (
+            meshToggle.checked &&
+            latestLandmarks.length > 0
+        ) {
+            overlayCtx.fillStyle =
+                "#00ff80";
+            for (
+                const point
+                of latestLandmarks
+            ) {
+                const x =
+                    point.x *
+                    overlayCanvas.width;
+                const y =
+                    point.y *
+                    overlayCanvas.height;
+                overlayCtx.beginPath();
+                overlayCtx.arc(
+                    x,
+                    y,
+                    1.2,
+                    0,
+                    Math.PI * 2
+                );
+                overlayCtx.fill();
+            }
+        }
+        requestAnimationFrame(
+            drawOverlay
+        );
+    }
+    meshToggle.addEventListener(
+        "change",
+        () => {
+
+            if (
+                !meshToggle.checked
+            ) {
+
+                overlayCtx.clearRect(
+                    0,
+                    0,
+                    overlayCanvas.width,
+                    overlayCanvas.height
+                );
+
+            }
+
+        }
+    );
+    function updateUI(metrics) {
+
+        document.getElementById(
+            "totalScore"
+        ).innerText =
+            metrics.score.toFixed(2);
+        const badge =
+            document.getElementById(
+                "statusBadge"
+            );
+        badge.innerText =
+            metrics.status;
+        badge.className =
+            metrics.status === "CONFIDENT"
+
+                ? "status-badge bg-confident"
+
+                : "status-badge bg-underconfident";
+        updateMetric(
+            "pitch",
+            metrics.sub_scores.head_pitch
+        );
+        updateMetric(
+            "mouth",
+            metrics.sub_scores.mouth_curve
+        );
+        updateMetric(
+            "brow",
+            metrics.sub_scores.brow_height
+        );
+        updateMetric(
+            "eye",
+            metrics.sub_scores.eye_openness
+        );
+    }
+    function updateMetric(
+        key,
+        value
+    ) {
+
+        const percentage =
+            Math.min(
+                Math.max(
+                    value * 100,
+                    0
+                ),
+                100
+            );
+        document.getElementById(
+            `val-${key}`
+        ).innerText =
+            value.toFixed(2);
+        document.getElementById(
+            `bar-${key}`
+        ).style.width =
+            `${percentage}%`;
+    }
+</script>
+</body>
+</html>
+
